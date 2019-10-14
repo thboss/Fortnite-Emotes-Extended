@@ -2,6 +2,7 @@
 #include <sourcemod>
 #include <sdktools>
 #include <sdkhooks>
+#include <clientprefs>
 #include <multicolors>
 #include <autoexecconfig>
 
@@ -18,7 +19,6 @@ TopMenu hTopMenu;
 ConVar g_cvFlagEmotesMenu;
 ConVar g_cvCooldown;
 ConVar g_cvEmotesSounds;
-ConVar g_cvHideWeapons;
 
 int g_iEmoteEnt[MAXPLAYERS+1];
 int g_iEmoteSoundEnt[MAXPLAYERS+1];
@@ -38,6 +38,9 @@ int g_iWeaponHandEnt[MAXPLAYERS+1];
 Handle g_EmoteForward;
 
 bool g_bHooked[MAXPLAYERS + 1];
+
+Handle g_bHideWeaponsCookie;
+bool g_bHideWeapons[MAXPLAYERS+1];
 
 
 public Plugin myinfo =
@@ -78,8 +81,7 @@ public void OnPluginStart()
 	g_cvEmotesSounds = AutoExecConfig_CreateConVar("sm_emotes_sounds", "1", "Enable/Disable sounds for emotes.", _, true, 0.0, true, 1.0);
 	g_cvCooldown = AutoExecConfig_CreateConVar("sm_emotes_cooldown", "4.0", "Cooldown for emotes in seconds. -1 or 0 = no cooldown.");
 	g_cvFlagEmotesMenu = AutoExecConfig_CreateConVar("sm_emotes_admin_flag_menu", "", "admin flag for !emotes command (empty for all players)");
-	g_cvHideWeapons = AutoExecConfig_CreateConVar("sm_emotes_hide_weapons", "1", "Hide weapons when dancing", _, true, 0.0, true, 1.0);
-	g_cvHidePlayers = CreateConVar("sm_emotes_hide_enemies", "0", "Hide enemy players when dancing", _, true, 0.0, true, 1.0);
+	g_cvHidePlayers = CreateConVar("sm_emotes_hide_enemies", "1", "Hide enemy players when dancing", _, true, 0.0, true, 1.0);
 	
 	AutoExecConfig_ExecuteFile();
 	
@@ -95,11 +97,13 @@ public void OnPluginStart()
 	g_cvThirdperson.AddChangeHook(OnConVarChanged);
 	g_cvThirdperson.BoolValue = true;
 	
+	g_bHideWeaponsCookie = RegClientCookie("emotes_hideweapons", "Hide weapons while dancing", CookieAccess_Private);	
+	
 	TopMenu topmenu;
 	if (LibraryExists("adminmenu") && ((topmenu = GetAdminTopMenu()) != null))
 	{
 		OnAdminMenuReady(topmenu);
-	}	
+	}
 	
 	g_EmoteForward = CreateGlobalForward("fnemotes_OnEmote", ET_Ignore, Param_Cell);
 }
@@ -107,9 +111,9 @@ public void OnPluginStart()
 public void OnPluginEnd()
 {
 	for (int i = 1; i <= MaxClients; i++)
-            if (IsValidClient(i) && g_bClientDancing[i]) {
-				StopEmote(i);
-			}
+		if (IsValidClient(i) && g_bClientDancing[i]) {
+			StopEmote(i);
+		}
 }
 
 public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
@@ -117,6 +121,13 @@ public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max
 	RegPluginLibrary("fnemotes");
 	CreateNative("fnemotes_IsClientEmoting", Native_IsClientEmoting);
 	return APLRes_Success;
+}
+
+public void OnClientCookiesCached(int client) {
+  if (IsFakeClient(client))
+    return;
+
+  g_bHideWeapons[client] = GetCookieBool(client, g_bHideWeaponsCookie);
 }
 
 void OnConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
@@ -271,11 +282,10 @@ public void OnMapStart()
 	PrecacheSound("*/kodua/fortnite_emotes/athena_emote_hot_music.wav");
 }
 
-
 public void OnClientPutInServer(int client)
 {
 	if (IsValidClient(client))
-	{	
+	{
 		ResetCam(client);
 		TerminateEmote(client);
 		g_iWeaponHandEnt[client] = INVALID_ENT_REFERENCE;
@@ -286,6 +296,7 @@ public void OnClientPutInServer(int client)
 		}
 	}
 }
+
 
 public void OnClientDisconnect(int client)
 {
@@ -331,11 +342,9 @@ void Event_PlayerHurt(Event event, const char[] name, bool dontBroadcast)
 void Event_Start(Event event, const char[] name, bool dontBroadcast)
 {
 	for (int i = 1; i <= MaxClients; i++)
-            if (IsValidClient(i, false) && g_bClientDancing[i]) {
+            if (IsValidClient(i) && g_bClientDancing[i]) {
 				ResetCam(i);
-				//StopEmote(client);
 				WeaponUnblock(i);
-				
 				g_bClientDancing[i] = false;
 			}
 }
@@ -505,9 +514,8 @@ Action CreateEmote(int client, const char[] anim1, const char[] anim2, const cha
 
 		SetVariantString(anim1);
 		AcceptEntityInput(EmoteEnt, "SetAnimation", -1, -1, 0);
-
+		
 		SetCam(client);
-
 		g_bClientDancing[client] = true;
 		
 		if(g_cvHidePlayers.BoolValue)
@@ -519,18 +527,18 @@ Action CreateEmote(int client, const char[] anim1, const char[] anim2, const cha
 					g_bHooked[i] = true;
 				}
 		}
-
+		
 		if (g_cvCooldown.FloatValue > 0.0)
 		{
 			CooldownTimers[client] = CreateTimer(g_cvCooldown.FloatValue, ResetCooldown, client);
 		}
-		
+
 		if(g_EmoteForward != null)
 		{
 			Call_StartForward(g_EmoteForward);
 			Call_PushCell(client);
 			Call_Finish();
-		}
+		}		
 	}
 	
 	return Plugin_Handled;
@@ -582,7 +590,7 @@ int GetEmoteActivator(int iEntRefDancer)
 }
 
 void StopEmote(int client)
-{
+{	
 	if (!g_iEmoteEnt[client])
 		return;
 
@@ -591,18 +599,21 @@ void StopEmote(int client)
 	{
 		AcceptEntityInput(client, "ClearParent", client, client, 0);
 		AcceptEntityInput(iEmoteEnt, "Kill");
-		
+
 		ResetCam(client);
 		WeaponUnblock(client);
 		SetEntityMoveType(client, MOVETYPE_WALK);
 
 		g_iEmoteEnt[client] = 0;
 		g_bClientDancing[client] = false;
-	} else
+
+	}else
 	{
 		g_iEmoteEnt[client] = 0;
 		g_bClientDancing[client] = false;
-	}
+	}	
+	
+	g_iEmoteEnt[client] = 0;
 
 	if (g_iEmoteSoundEnt[client])
 	{
@@ -660,7 +671,7 @@ void WeaponBlock(int client)
 	SDKHook(client, SDKHook_WeaponCanUse, WeaponCanUseSwitch);
 	SDKHook(client, SDKHook_WeaponSwitch, WeaponCanUseSwitch);
 	
-	if(g_cvHideWeapons.BoolValue)
+	if(g_bHideWeapons[client])
 		SDKHook(client, SDKHook_PostThinkPost, OnPostThinkPost);
 		
 	int iEnt = GetEntPropEnt(client, Prop_Send, "m_hActiveWeapon");
@@ -745,6 +756,7 @@ Action Menu_Dance(int client)
 	Menu menu = new Menu(MenuHandler1);
 
 	char title[65];
+	char buffer[128];
 	Format(title, sizeof(title), "%T:", "TITLE_MAIM_MENU", client);
 	menu.SetTitle(title);	
 
@@ -752,6 +764,11 @@ Action Menu_Dance(int client)
 	AddTranslatedMenuItem(menu, "", "RANDOM_DANCE", client);
 	AddTranslatedMenuItem(menu, "", "EMOTES_LIST", client);
 	AddTranslatedMenuItem(menu, "", "DANCES_LIST", client);
+	
+	Format(buffer, sizeof(buffer), "%T", "HIDE_WEAPONS_NO", client);
+	if (g_bHideWeapons[client])
+		Format(buffer, sizeof(buffer), "%T", "HIDE_WEAPONS_YES", client);
+	menu.AddItem("4", buffer);	
 	
 	menu.ExitButton = true;
 	menu.Display(client, MENU_TIME_FOREVER);
@@ -781,6 +798,12 @@ int MenuHandler1(Menu menu, MenuAction action, int param1, int param2)
 				}		
 				case 2: EmotesMenu(client);
 				case 3: DancesMenu(client);
+				case 4:
+				{
+					g_bHideWeapons[client] = !g_bHideWeapons[client];
+					SetCookieBool(client, g_bHideWeaponsCookie, g_bHideWeapons[client]);
+					Menu_Dance(client);
+				}
 			}
 		}	
 	}
@@ -1804,6 +1827,35 @@ bool CheckAdminFlags(int client, int iFlag)
 {
 	int iUserFlags = GetUserFlagBits(client);
 	return (iUserFlags & ADMFLAG_ROOT || (iUserFlags & iFlag) == iFlag);
+}
+
+stock bool GetCookieBool(int client, Handle cookie, bool defaultValue = false)
+{
+  return GetCookieInt(client, cookie, defaultValue) != 0;
+}
+
+stock void SetCookieBool(int client, Handle cookie, bool value)
+{
+  int convertedInt = value ? 1 : 0;
+  SetCookieInt(client, cookie, convertedInt);
+}
+
+stock int GetCookieInt(int client, Handle cookie, int defaultValue = 0)
+{
+  char buffer[64];
+  GetClientCookie(client, cookie, buffer, sizeof(buffer));
+  if (StrEqual(buffer, "")) {
+    return defaultValue;
+  }
+
+  return StringToInt(buffer);
+}
+
+stock void SetCookieInt(int client, Handle cookie, int value)
+{
+  char buffer[64];
+  IntToString(value, buffer, sizeof(buffer));
+  SetClientCookie(client, cookie, buffer);
 }
 
 int GetEmotePeople()
