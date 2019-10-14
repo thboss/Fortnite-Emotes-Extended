@@ -48,9 +48,9 @@
 
 	"INVALID_EMOTE_ID"
 	{
-		"en"			"[{olive}Emotes{default}]{darkred} Invalid Emote ID, Should be between (1-86)"
-		"tr"			"[{olive}Emotes{default}]{darkred} Geçersiz Emote ID, (1-86) arasında olmalıdır"	
-		"es"			"[{olive}Emotes{default}]{darkred} Emote ID inválida, Debe estar entre (1-86)"
+		"en"			"[{olive}Emotes{default}]{darkred} Invalid Emote ID, Should be between (1-84)"
+		"tr"			"[{olive}Emotes{default}]{darkred} Geçersiz Emote ID, (1-84) arasında olmalıdır"	
+		"es"			"[{olive}Emotes{default}]{darkred} Emote ID inválida, Debe estar entre (1-84)"
 	}
 
 	"RANDOM_EMOTE"
@@ -79,7 +79,17 @@
 		"en"			"Dances List"
 		"tr"			"Dans Listesi"
 		"es"			"Lista de Bailes"
-	}		
+	}
+
+	"HIDE_WEAPONS_YES"
+	{
+		"en"			"Hide Weapons : yes"
+	}
+
+	"HIDE_WEAPONS_NO"
+	{
+		"en"			"Hide Weapons : no"
+	}
 
 	"EMOTE_PLAYER"
 	{
@@ -132,7 +142,7 @@
 
 	"Emote_ThumbsDown"
 	{
-		"en"			"Thumbs Down"
+		"en"			"Unlike"
 		"tr"			"Başparmak Aşağı"
 		"es"			"Pulgares Abajo"
 	}
@@ -146,7 +156,7 @@
 
 	"Emote_BlowKiss"
 	{
-		"en"			"Blow kiss"
+		"en"			"Send kiss"
 		"tr"			"Öpücük atmak"
 		"es"			"Beso Aéreo"
 	}
@@ -181,14 +191,14 @@
 
 	"Emote_DustingOffHands"
 	{
-		"en"			"Band of the fort"
+		"en"			"Finish"
 		"tr"			"Kale grubu"
 		"es"			"Desempolvarse las Manos"
 	}
 
 	"Emote_DustOffShoulders"
 	{
-		"en"			"Shake It Up 2"
+		"en"			"shake off dust"
 		"tr"			"2 kadar salla" 
 		"es"			"Muévelo 2"
 	}
@@ -202,7 +212,7 @@
 
 	"Emote_Fishing"
 	{
-		"en"			"On the Hook"
+		"en"			"Fishing"
 		"tr"			"Kancada"
 		"es"			"En el Gancho"
 	}
@@ -244,14 +254,14 @@
 
 	"Emote_IBreakYou"
 	{
-		"en"			"Breaking Point"
+		"en"			"I Break You"
 		"tr"			"Kırılma noktası"
 		"es"			"Punto de Ruptura"
 	}
 	
 	"Emote_IHeartYou"
 	{
-		"en"			"True Love"
+		"en"			"I Love You"
 		"tr"			"Gerçek aşk"  
 		"es"			"Amor Verdadero"
 	}
@@ -286,7 +296,7 @@
 
 	"Emote_NotToday"
 	{
-		"en"			"No hoy"
+		"en"			"No No No!"
 		"tr"			"Bugün değil"
 		"es"			"Hoy No"
 	}
@@ -348,7 +358,7 @@
 
 	"Emote_ThumbsUp"
 	{
-		"en"			"Thumbs Up"
+		"en"			"like"
 		"tr"			"Başparmak havaya" 
 		"es"			"Pulgares Arriba"
 	}
