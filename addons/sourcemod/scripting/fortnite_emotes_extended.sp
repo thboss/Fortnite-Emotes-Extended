@@ -19,6 +19,7 @@ TopMenu hTopMenu;
 ConVar g_cvFlagEmotesMenu;
 ConVar g_cvCooldown;
 ConVar g_cvEmotesSounds;
+ConVar g_cvHideWeapons;
 
 int g_iEmoteEnt[MAXPLAYERS+1];
 int g_iEmoteSoundEnt[MAXPLAYERS+1];
@@ -81,6 +82,7 @@ public void OnPluginStart()
 	g_cvEmotesSounds = AutoExecConfig_CreateConVar("sm_emotes_sounds", "1", "Enable/Disable sounds for emotes.", _, true, 0.0, true, 1.0);
 	g_cvCooldown = AutoExecConfig_CreateConVar("sm_emotes_cooldown", "4.0", "Cooldown for emotes in seconds. -1 or 0 = no cooldown.");
 	g_cvFlagEmotesMenu = AutoExecConfig_CreateConVar("sm_emotes_admin_flag_menu", "", "admin flag for !emotes command (empty for all players)");
+	g_cvHideWeapons = AutoExecConfig_CreateConVar("sm_emotes_hide_weapons", "2", "Hide weapons when dancing \n 0 = force hide \n 1 = force show \n 2 = allow client to decide in !emotes menu");
 	g_cvHidePlayers = CreateConVar("sm_emotes_hide_enemies", "1", "Hide enemy players when dancing", _, true, 0.0, true, 1.0);
 	
 	AutoExecConfig_ExecuteFile();
@@ -671,8 +673,16 @@ void WeaponBlock(int client)
 	SDKHook(client, SDKHook_WeaponCanUse, WeaponCanUseSwitch);
 	SDKHook(client, SDKHook_WeaponSwitch, WeaponCanUseSwitch);
 	
-	if(g_bHideWeapons[client])
+	if (g_cvHideWeapons.IntValue == 0)
+		return;
+	else if (g_cvHideWeapons.IntValue == 1)	
 		SDKHook(client, SDKHook_PostThinkPost, OnPostThinkPost);
+	else
+	{
+		if (g_bHideWeapons[client])
+		SDKHook(client, SDKHook_PostThinkPost, OnPostThinkPost);
+		else return;
+	}	
 		
 	int iEnt = GetEntPropEnt(client, Prop_Send, "m_hActiveWeapon");
 	if(iEnt != -1)
@@ -765,10 +775,13 @@ Action Menu_Dance(int client)
 	AddTranslatedMenuItem(menu, "", "EMOTES_LIST", client);
 	AddTranslatedMenuItem(menu, "", "DANCES_LIST", client);
 	
-	Format(buffer, sizeof(buffer), "%T", "HIDE_WEAPONS_NO", client);
-	if (g_bHideWeapons[client])
-		Format(buffer, sizeof(buffer), "%T", "HIDE_WEAPONS_YES", client);
-	menu.AddItem("4", buffer);	
+	if (g_cvHideWeapons.IntValue != 0 && g_cvHideWeapons.IntValue != 1)
+	{
+		Format(buffer, sizeof(buffer), "%T", "HIDE_WEAPONS_NO", client);
+		if (g_bHideWeapons[client])
+			Format(buffer, sizeof(buffer), "%T", "HIDE_WEAPONS_YES", client);
+		menu.AddItem("4", buffer);
+	}
 	
 	menu.ExitButton = true;
 	menu.Display(client, MENU_TIME_FOREVER);
