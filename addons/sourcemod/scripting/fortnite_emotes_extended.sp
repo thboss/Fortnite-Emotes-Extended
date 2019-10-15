@@ -356,15 +356,7 @@ public Action Command_Menu(int client, int args)
 	if (!IsValidClient(client))
 		return Plugin_Handled;
 
-
-	char sBuffer[32];
-	g_cvFlagEmotesMenu.GetString(sBuffer, sizeof(sBuffer));
-
-	if (CheckAdminFlags(client, ReadFlagString(sBuffer)))
-	{
-		Menu_Dance(client);
-	}
-	else CPrintToChat(client, "%t", "NO_ACCESS_FLAG");	
+	Menu_Dance(client);
 
 	return Plugin_Handled;
 }
@@ -796,21 +788,62 @@ int MenuHandler1(Menu menu, MenuAction action, int param1, int param2)
 		case MenuAction_Select:
 		{
 			int client = param1;
+
+			char sBuffer[32];
+			g_cvFlagEmotesMenu.GetString(sBuffer, sizeof(sBuffer));			
 			
 			switch (param2)
 			{
 				case 0: 
 				{
-					RandomEmote(client);
-					Menu_Dance(client);
+					if (CheckAdminFlags(client, ReadFlagString(sBuffer)))
+					{
+						RandomEmote(client);
+						Menu_Dance(client);					
+					}
+					else 
+					{
+						Menu_Dance(client);	
+						CPrintToChat(client, "%t", "NO_ACCESS_FLAG");
+					}		
 				}		
 				case 1: 
 				{
-					RandomDance(client);
-					Menu_Dance(client);
+					if (CheckAdminFlags(client, ReadFlagString(sBuffer)))
+					{
+						RandomDance(client);
+						Menu_Dance(client);				
+					}
+					else 
+					{
+						Menu_Dance(client);	
+						CPrintToChat(client, "%t", "NO_ACCESS_FLAG");
+					}				
 				}		
-				case 2: EmotesMenu(client);
-				case 3: DancesMenu(client);
+				case 2:
+				{
+					if (CheckAdminFlags(client, ReadFlagString(sBuffer)))
+					{
+						EmotesMenu(client);			
+					}
+					else 
+					{
+						Menu_Dance(client);	
+						CPrintToChat(client, "%t", "NO_ACCESS_FLAG");
+					}
+				}	
+				case 3: 
+				{
+					if (CheckAdminFlags(client, ReadFlagString(sBuffer)))
+					{
+						DancesMenu(client);			
+					}
+					else 
+					{
+						Menu_Dance(client);	
+						CPrintToChat(client, "%t", "NO_ACCESS_FLAG");
+					}
+				}	
 				case 4:
 				{
 					g_bHideWeapons[client] = !g_bHideWeapons[client];
