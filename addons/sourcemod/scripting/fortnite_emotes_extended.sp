@@ -43,18 +43,40 @@ bool g_bHooked[MAXPLAYERS + 1];
 Handle g_bHideWeaponsCookie;
 bool g_bHideWeapons[MAXPLAYERS+1];
 
+Handle g_hCEconWearable_Equip;
+
 
 public Plugin myinfo =
 {
 	name = "SM Fortnite Emotes Extended",
-	author = "Kodua, Franc1sco franug, TheBO$$",
+	author = "Kodua, Franc1sco franug, TheBO$$, Phoenix (˙·٠●Феникс●٠·˙)",
 	description = "This plugin is for demonstration of some animations from Fortnite in CS:GO",
-	version = "1.2.2",
+	version = "1.2.4",
 	url = "https://github.com/Franc1sco/Fortnite-Emotes-Extended"
 };
 
 public void OnPluginStart()
-{	
+{
+	GameData hGameData = new GameData("fortnite_emotes_extended.games");
+	if (!hGameData)
+	{
+		SetFailState("Couldn't load fortnite_emotes_extended.games game data!");
+		return;
+	}
+
+	StartPrepSDKCall(SDKCall_Entity);
+	PrepSDKCall_SetFromConf(hGameData, SDKConf_Virtual, "CEconWearable::Equip");
+	PrepSDKCall_AddParameter(SDKType_CBasePlayer, SDKPass_Pointer);
+
+	if (!(g_hCEconWearable_Equip = EndPrepSDKCall()))
+	{
+		SetFailState("Failed to create SDKCall for CEconWearable::Equip offset!"); 
+		return;
+	}
+
+	delete hGameData;
+
+	
 	LoadTranslations("common.phrases");
 	LoadTranslations("fnemotes.phrases");
 	
@@ -597,6 +619,8 @@ void StopEmote(int client)
 		ResetCam(client);
 		WeaponUnblock(client);
 		SetEntityMoveType(client, MOVETYPE_WALK);
+		
+		FixWearable(client);
 
 		g_iEmoteEnt[client] = 0;
 		g_bClientDancing[client] = false;
@@ -635,6 +659,8 @@ void TerminateEmote(int client)
 	{
 		AcceptEntityInput(client, "ClearParent", client, client, 0);
 		AcceptEntityInput(iEmoteEnt, "Kill");
+		
+		FixWearable(client);
 
 		g_iEmoteEnt[client] = 0;
 		g_bClientDancing[client] = false;
@@ -1913,3 +1939,13 @@ int GetEmotePeople()
 			
 	return count;
 }
+
+void FixWearable(int iClient)
+{
+	int iWearable = GetEntPropEnt(iClient, Prop_Send, "m_hMyWearables");
+
+	if(iWearable != -1)
+	{
+		SDKCall(g_hCEconWearable_Equip, iWearable, iClient);
+	}
+} 
