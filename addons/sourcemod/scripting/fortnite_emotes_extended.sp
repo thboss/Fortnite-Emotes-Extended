@@ -5,8 +5,6 @@
 #include <clientprefs>
 #include <multicolors>
 #include <autoexecconfig>
-
-#undef REQUIRE_PLUGIN
 #include <adminmenu>
 
 #pragma newdecls required
@@ -18,6 +16,7 @@ TopMenu hTopMenu;
 
 ConVar g_cvFlagEmotesMenu;
 ConVar g_cvCooldown;
+ConVar g_cvBlockRoundStart;
 ConVar g_cvEmotesSounds;
 ConVar g_cvHideWeapons;
 
@@ -38,6 +37,8 @@ int g_iWeaponHandEnt[MAXPLAYERS+1];
 
 Handle g_EmoteForward;
 
+bool g_bBlockEmote[MAXPLAYERS + 1];
+
 bool g_bHooked[MAXPLAYERS + 1];
 
 Handle g_bHideWeaponsCookie;
@@ -51,7 +52,7 @@ public Plugin myinfo =
 	name = "SM Fortnite Emotes Extended",
 	author = "Kodua, Franc1sco franug, TheBO$$, Phoenix (˙·٠●Феникс●٠·˙)",
 	description = "This plugin is for demonstration of some animations from Fortnite in CS:GO",
-	version = "1.2.4",
+	version = "1.2.2",
 	url = "https://github.com/Franc1sco/Fortnite-Emotes-Extended"
 };
 
@@ -95,6 +96,12 @@ public void OnPluginStart()
 	
 	HookEvent("round_prestart",  Event_Start);
 	
+	HookEvent("round_end",  Event_RoundEnd);
+	
+	HookEvent("player_spawned", Event_PlayerSpawn);
+	
+	HookEvent("round_freeze_end",  Event_FreezeEnd);
+	
 	/**
 		Convars
 	**/
@@ -102,10 +109,11 @@ public void OnPluginStart()
 	AutoExecConfig_SetFile("fortnite_emotes_extended");
 
 	g_cvEmotesSounds = AutoExecConfig_CreateConVar("sm_emotes_sounds", "1", "Enable/Disable sounds for emotes.", _, true, 0.0, true, 1.0);
-	g_cvCooldown = AutoExecConfig_CreateConVar("sm_emotes_cooldown", "4.0", "Cooldown for emotes in seconds. -1 or 0 = no cooldown.");
+	g_cvCooldown = AutoExecConfig_CreateConVar("sm_emotes_cooldown", "2.0", "Cooldown for emotes in seconds. -1 or 0 = no cooldown.");
 	g_cvFlagEmotesMenu = AutoExecConfig_CreateConVar("sm_emotes_admin_flag_menu", "", "admin flag for !emotes command (empty for all players)");
 	g_cvHideWeapons = AutoExecConfig_CreateConVar("sm_emotes_hide_weapons", "2", "Hide weapons when dancing \n 0 = force hide \n 1 = force show \n 2 = allow client to decide in !emotes menu");
-	g_cvHidePlayers = CreateConVar("sm_emotes_hide_enemies", "1", "Hide enemy players when dancing", _, true, 0.0, true, 1.0);
+	g_cvHidePlayers = CreateConVar("sm_emotes_hide_enemies", "0", "Hide enemy players when dancing", _, true, 0.0, true, 1.0);
+	g_cvBlockRoundStart = CreateConVar("sm_emotes_block_round_start", "0", "block dancing during round", _, true, 0.0, true, 1.0);
 	
 	AutoExecConfig_ExecuteFile();
 	
@@ -175,6 +183,7 @@ public void OnMapStart()
 
 	// edit
 	// add the sound file routes here
+	/*
 	AddFileToDownloadsTable("sound/kodua/fortnite_emotes/ninja_dance_01.mp3");
 	AddFileToDownloadsTable("sound/kodua/fortnite_emotes/dance_soldier_03.mp3");
 	AddFileToDownloadsTable("sound/kodua/fortnite_emotes/Hip_Hop_Good_Vibes_Mix_01_Loop.wav");
@@ -235,6 +244,7 @@ public void OnMapStart()
 	AddFileToDownloadsTable("sound/kodua/fortnite_emotes/eastern_bloc_musc_setup_d.wav");
 	AddFileToDownloadsTable("sound/kodua/fortnite_emotes/athena_emote_bandofthefort_music.wav");
 	AddFileToDownloadsTable("sound/kodua/fortnite_emotes/athena_emote_hot_music.wav");
+	*/
     
 
 	// this dont touch
@@ -313,6 +323,8 @@ public void OnClientPutInServer(int client)
 		ResetCam(client);
 		TerminateEmote(client);
 		g_iWeaponHandEnt[client] = INVALID_ENT_REFERENCE;
+		
+		g_bBlockEmote[client] = false;	
 
 		if (CooldownTimers[client] != null)
 		{
@@ -328,6 +340,10 @@ public void OnClientDisconnect(int client)
 	{
 		ResetCam(client);
 		TerminateEmote(client);
+
+
+		g_bBlockEmote[client] = false;
+
 
 		if (CooldownTimers[client] != null)
 		{
@@ -366,11 +382,53 @@ void Event_PlayerHurt(Event event, const char[] name, bool dontBroadcast)
 void Event_Start(Event event, const char[] name, bool dontBroadcast)
 {
 	for (int i = 1; i <= MaxClients; i++)
-            if (IsValidClient(i) && g_bClientDancing[i]) {
+	{
+        if (IsValidClient(i) && g_bClientDancing[i]) {
+			ResetCam(i);
+			WeaponUnblock(i);
+			g_bClientDancing[i] = false;
+		}
+		
+		g_bBlockEmote[i] = false;
+	}
+}
+
+void Event_RoundEnd(Event event, const char[] name, bool dontBroadcast)
+{
+	for (int i = 1; i <= MaxClients; i++)
+	{
+        if (IsValidClient(i) && g_bClientDancing[i]) {
+			ResetCam(i);
+			WeaponUnblock(i);
+			g_bClientDancing[i] = false;
+		}
+		
+		g_bBlockEmote[i] = false;
+	}
+}
+
+void Event_FreezeEnd(Event event, const char[] name, bool dontBroadcast)
+{
+	for (int i = 1; i <= MaxClients; i++)
+	{
+        if (IsValidClient(i) && g_bClientDancing[i]) {
+			if(g_cvBlockRoundStart.BoolValue)
+			{
 				ResetCam(i);
+				StopEmote(i);
 				WeaponUnblock(i);
 				g_bClientDancing[i] = false;
 			}
+		}
+		
+		g_bBlockEmote[i] = true;
+	}
+}
+
+void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast)
+{
+	int client = GetClientOfUserId(event.GetInt("userid"));		
+	g_bBlockEmote[client] = false;
 }
 
 public Action Command_Menu(int client, int args)
@@ -387,6 +445,15 @@ Action CreateEmote(int client, const char[] anim1, const char[] anim2, const cha
 {
 	if (!IsValidClient(client))
 		return Plugin_Handled;
+	
+	if(g_cvBlockRoundStart.BoolValue)
+	{
+		if(g_bBlockEmote[client])
+		{
+			CReplyToCommand(client, "%t", "BLOCK_ON_ROUND_START");
+			return Plugin_Handled;
+		}
+	}		
 
 	if (!IsPlayerAlive(client))
 	{
@@ -802,6 +869,7 @@ Action Menu_Dance(int client)
 	}
 	
 	menu.ExitButton = true;
+	menu.ExitBackButton = true;	
 	menu.Display(client, MENU_TIME_FOREVER);
  
 	return Plugin_Handled;
@@ -877,7 +945,15 @@ int MenuHandler1(Menu menu, MenuAction action, int param1, int param2)
 					Menu_Dance(client);
 				}
 			}
-		}	
+		}
+		case MenuAction_Cancel :
+		{
+			if (param2 == MenuCancel_ExitBack)
+			{
+				FakeClientCommand(param1, "sm_stw");
+			}
+		}
+		case MenuAction_End : delete menu;		
 	}
 }
 
@@ -1886,9 +1962,9 @@ void AddTranslatedMenuItem(Menu menu, const char[] opt, const char[] phrase, int
 	menu.AddItem(opt, buffer);
 }
 
-stock bool IsValidClient(int client, bool nobots = true)
+stock bool IsValidClient(int client) //, bool nobots = true)
 {
-	if (client <= 0 || client > MaxClients || !IsClientConnected(client) || (nobots && IsFakeClient(client)))
+	if (client <= 0 || client > MaxClients || !IsClientConnected(client)) // || (nobots && IsFakeClient(client)))
 	{
 		return false;
 	}
