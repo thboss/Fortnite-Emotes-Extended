@@ -12,3 +12,5 @@ sm_emotes_hide_enemies "0/1"  Enable/Disable hide enemy players while dancing.
 sm_emotes_hide_weapons "0/1/2"  0 = force show.  -  1 = force hide.  -  2 = allow client to decide in !emotes menu.
 
 sm_emotes_sounds "0/1"  Enable/Disable sounds for emotes.
+
+sm_emotes_block_round_start "0/1" Enable/Disable emotes during round
